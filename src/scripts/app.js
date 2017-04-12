@@ -83,11 +83,11 @@ $( document ).ready(function() {
 	//define layers
 	sitesLayer = L.featureGroup().addTo(map);
 
+	//create site/location filters, sites loaded from there
 	createGeoFilterGroups(GeoFilterGroupList);
+
+	//create constituent dropdowns
 	populateConstituentGroupFilters();
-	//loadCountyLookup();
-	//parseBaseLayers();
-	//loadSites();
 	
 	/*  START EVENT HANDLERS */
 	$('#mobile-main-menu').click(function() {
@@ -192,7 +192,6 @@ $( document ).ready(function() {
 
 function populateConstituentGroupFilters() {
 	$.each(data.constituentGroupList , function( index, item ) {
-		//console.log('new',item, item.constituentGroup)
 
 		var dropDownName = camelize(item.constituentGroup) + "-select"
 		$("#constituentFilterSelect").append("<select id='" + dropDownName  + "' class='selectpicker geoFilterSelect' multiple data-selected-text-format='count' data-dropup-auto='false' title='" + item.constituentGroup + "'></select>");
@@ -212,7 +211,6 @@ function populateConstituentGroupFilters() {
 function loadSites(filterInfo) {
 
 	toastr.info('Drawing GeoJSON...', {timeOut: 0});
-	// $('#filtersPanel').collapse("toggle");
 
 	//clear current display layer
 	sitesLayer.clearLayers();
@@ -238,14 +236,8 @@ function loadSites(filterInfo) {
 	var geoJSON = omnivore.csv.parse(CSVdata, null, geoJSONlayer).addTo(map);
 	sitesLayer.addLayer(geoJSON);
 
-	
-
 	//needs a setTimeout for geoJSON to finish loading
-	setTimeout(function(){ 
-		map.fitBounds(sitesLayer.getBounds()); 
-		console.log(map.getCenter(),map.getZoom())
-	}, 100);
-	
+	setTimeout(function(){ map.fitBounds(sitesLayer.getBounds()); }, 100);
 	toastr.clear();
 }
 
@@ -291,7 +283,6 @@ function addFilterOption(code, text, elementName) {
 }
 
 function getCountyNameFromFIPS(FIPScode, elementName, callback) {
-	//console.log('here2');
 
 	//from here: https://www.census.gov/geo/reference/codes/cou.html
 	//then converted to json: https://www.csvjson.com/csv2json
