@@ -1,0 +1,12 @@
+Martyn Smith
+04/10/2017
+
+305b Mapper Convert original table
+------------------
+
+1. Remove alias row from Excel table
+2. Make sure no spaces or special chars in field headings
+3. Convert lat/long fields to numbers
+4. Save as CSV in Excel
+
+

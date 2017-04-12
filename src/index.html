@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="author" content="Martyn Smith - USGS NY WSC">
+	<link rel="copyright" href="license.txt">
+    <title>NY WSC 305b Mapper</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="./scripts/vendor.bundle.min.js"></script>
+    <script src="./scripts/bundle.min.js"></script>  
+  </head>
+  <body>
+    <div id="top-menu">
+        <div class="title">
+            <a class='top-menu-brand' href="http://www.usgs.gov"><img src="images/usgs-logo.png"></a>
+            <span class="app-name">NY WSC 305b Mapper</span> <span class="app-name-mobile">NY WSC 305b Mapper</span> 
+        </div>
+        <div id="mobile-main-menu">
+            <span class="glyphicon glyphicon-menu-hamburger" ></span>
+        </div>
+
+        <button id="aboutButton" class="btn btn-default top-menu-btn pull-right">
+            <i class="glyphicon glyphicon-info-sign"></i><span class="hidden-xs">&nbsp;&nbsp;About</span>
+        </button>
+    </div>
+
+    <div id="main-menu">
+        <div class="main-menu-container scrollable">
+            <div class="menu-content"> 
+                <div class="scrollable-content">
+
+                    <div class="panel-group" id="accordion">
+
+                        <div class="panel panel-default sidebar-panel">
+                            <div class="panel-heading">
+                                <h4 class="panel-title">
+                                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#filtersPanel">
+                                        Filters
+                                    </a>
+                                </h4>
+                            </div>
+                            <div id="filtersPanel" class="panel-collapse collapse in">
+                                <div class="panel-body collapse in">     
+                                    <button type="button" class="btn btn-success btn-block" id="resetFilters" >Reset Filters</button>
+       
+                                    <div id="geoFilterSelect">
+                                        </br><label>Site / Location Filters</label>
+                                    </div>
+
+                                    <div id="constituentFilterSelect">
+                                        </br><label>Constituent Group Filters</label>
+                                    </div>
+				
+									
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="panel panel-default sidebar-panel">
+                            <div class="panel-heading">
+                                <h4 class="panel-title">
+                                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#exportPanel">
+                                        Export
+                                    </a>
+                                </h4>
+                            </div>
+                            <div id="exportPanel" class="panel-collapse collapse">
+                                <div class="panel-body">     
+                                    <div id="export" style="display:block;">
+   
+                                        <div class="form-group">
+                                            <button type="button" class="btn btn-success btn-block" id="exportGeoJSON" >Export GeoJSON&nbsp;&nbsp;<i class="glyphicon glyphicon-download-alt"></i></button>
+                                        </div>
+                                       <div class="form-group">
+                                            <button type="button" class="btn btn-success btn-block" id="exportKML" >Export KML&nbsp;&nbsp;<i class="glyphicon glyphicon-download-alt"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel panel-default sidebar-panel">
+                            <div class="panel-heading">
+                                <h4 class="panel-title">
+                                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#basemapsPanel">
+                                        Basemaps
+                                    </a>
+                                </h4>
+                            </div>
+                            <div id="basemapsPanel" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <button id="btnStreets" class="btn btn-default slick-btn basemapBtn equalize"><img class="basemapThumb" alt="" src="images/streets.jpg"><br class="basemapThumb">Streets</button>
+                                    <button id="btnSatellite" class="btn btn-default slick-btn basemapBtn equalize" ><img class="basemapThumb" alt="" src="images/satellite.jpg"><br class="basemapThumb">Satellite</button>
+                                    <button id="btnTopo" class="btn btn-default slick-btn basemapBtn equalize"><img class="basemapThumb" alt="" src="images/topo.jpg"><br class="basemapThumb">Topo</button>
+                                    <button id="btnTerrain" class="btn btn-default slick-btn basemapBtn equalize"><img class="basemapThumb" alt="" src="images/terrain.jpg"><br class="basemapThumb">Terrain</button>
+                                    <button id="btnGray" class="btn btn-default slick-btn basemapBtn equalize slick-btn-selection" ><img class="basemapThumb" alt="" src="images/gray.jpg"><br class="basemapThumb">Gray</button>
+                                    <button id="btnNatGeo" class="btn btn-default slick-btn basemapBtn equalize"><img class="basemapThumb" alt="" src="images/natgeo.jpg"><br class="basemapThumb">NatGeo</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="info" class="identification pull-right">Developed by USGS NY WSC</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+    <div id="aboutModal" class="modal fade"  tabindex="-1" role="dialog" >
+        <div class="modal-dialog  modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button class="close" type="button" data-dismiss="modal" aria-hidden="true" style="color:gray;">&times;</button>
+                    <h4 class="modal-title">NY WSC 305b Mapper</h4>
+                </div>
+                <div id="aboutModalBody" class="modal-body">
+                    <ul class="nav nav-tabs" id="aboutModalTabs">
+                        <li role="presentation" class="active"><a id="aboutTab" href="#aboutTabPane" data-toggle="tab"><i class="fa fa-question-circle"></i>&nbsp;About the application</a></li>
+                        <li role="presentation"><a id="disclaimerTab" href="#disclaimerTabPane" data-toggle="tab"><i class="fa fa-exclamation-circle"></i>&nbsp;Site Information</a></li>
+                    </ul>
+                    <div class="tab-content">
+                        <div role="tabpanel" class="tab-pane active" id="aboutTabPane"></br>
+                            <p>Developed by Martyn Smith of the NY WSC.  Licensed under <a href="./license.txt" target="_blank">Apache 2.0</a></p>
+                            <p>Portions of this application were developed in conjuction with <a href="http://wim.usgs.gov" target="_blank">Web Informatics and Mapping (WiM)</a></p>
+                            <span id="appVersion"></span>
+                        </div>
+                        <div role="tabpanel" class="tab-pane" id="disclaimerTabPane"></br>
+                            <div class="row">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--<div class="modal-footer">
+                </div>-->
+            </div><!-- /.modal-content -->
+        </div> <!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <div id="mapDiv">
+        <div id="NWSlegend"></div>
+        <div id="radarTimeStamp" style="font-size:x-small;"></div>
+    </div>
+  </body>
+</html>
