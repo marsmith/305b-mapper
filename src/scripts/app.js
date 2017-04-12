@@ -190,60 +190,23 @@ $( document ).ready(function() {
 	/*  END EVENT HANDLERS */
 });
 
-
-
-// function loadCountyLookup() {
-// 	$.getJSON('./countyCodesNY.json', function(data) {
-// 		countyLookup = data;
-
-// 		loadCSV(CSVurl);
-// 		loadConstituentGroupLookup();
-// 	});
-// }
-
-// function loadConstituentGroupLookup() {
-// 	$.getJSON('./constituentGroupLookup.json', function(data) {
-// 		constituentGroupList = data;
-// 		//console.log('loadConstituentGroupLookup:',constituentGroupList)
-		
-// 		//make sure counties are loaded before sites are
-// 		loadConstituentPcodeLookup();
-		
-// 	});
-// }
-
-// function loadConstituentPcodeLookup() {
-// 	$.getJSON('./pCodeLookup.json', function(data) {
-// 		pCodeLookup = data;
-// 		//console.log('pcode lookup:',pCodeLookup)
-		
-// 		//make sure counties are loaded before sites are
-// 		populateConstituentGroupFilters();
-		
-// 	});
-// }
-
 function populateConstituentGroupFilters() {
-	//console.log('here1');
-	$.each(data.constituentGroupList , function( constituentGroup, valueList ) {
-		//console.log('here',constituentGroup, valueList)
+	$.each(data.constituentGroupList , function( index, item ) {
+		//console.log('new',item, item.constituentGroup)
 
-		var dropDownName = camelize(constituentGroup) + "-select"
-		//create dropdown for this constituent
-		$("#constituentFilterSelect").append("<select id='" + dropDownName  + "' class='selectpicker geoFilterSelect' multiple data-selected-text-format='count' data-dropup-auto='false' title='" + constituentGroup + "'></select>");
+		var dropDownName = camelize(item.constituentGroup) + "-select"
+		$("#constituentFilterSelect").append("<select id='" + dropDownName  + "' class='selectpicker geoFilterSelect' multiple data-selected-text-format='count' data-dropup-auto='false' title='" + item.constituentGroup + "'></select>");
 
-		//loop over valueList
-		$.each(valueList, function( index, constituentPcode ) {
-
-			//loop over pcode lookup
-			$.each(data.pCodeLookup, function( text, pcode ) {
-				if (pcode === constituentPcode) {
-					//console.log('match found',text, pcode)
-					addFilterOption(constituentPcode, pcode + ' | ' + text, '#' + dropDownName);
-				}
-			});
+		$.each(item.pCodes, function( index, pcode ) {
+			var val = Object.keys(pcode)[0];
+			var text = pcode[Object.keys(pcode)[0]];
+			//console.log(item.constituentGroup ,val,text)
+			addFilterOption(val, val + ' | ' + text, '#' + dropDownName);
 		});
 	});
+
+	//REFRESH	
+	$('.selectpicker').selectpicker('refresh');
 }
 
 function loadSites(filterInfo) {
@@ -316,18 +279,14 @@ function populateGeoFilters(feature) {
 		if (filter.layerName === 'Hydrologic Unit') {addFilterOption(feature.properties.HUNIT.substring(0,8), feature.properties.HUNIT.substring(0,8), elementName)};
 		if (filter.layerName === 'Well Use') {addFilterOption(feature.properties.WELLUSE, feature.properties.WELLUSE, elementName)};
 		if (filter.layerName === 'Well Type') {addFilterOption(feature.properties.WELLCOMPIN, feature.properties.WELLCOMPIN, elementName)};
-
-		//console.log('here', feature.properties.STAID,filter.layerName,code)
 	});
 }
 
 function addFilterOption(code, text, elementName) {
-	//console.log('here3', code, elementName);
 	//add it if it doesn't exist
 	if (code && code !== 'na' && $(elementName + ' option[value="' + code + '"]').length == 0) {
 		//console.log('adding an option for:',elementName,code)
 		$(elementName).append($('<option></option>').attr('value',code).text(text));
-		$('.selectpicker').selectpicker('refresh');
 	}
 }
 
