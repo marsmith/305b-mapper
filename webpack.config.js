@@ -29,7 +29,8 @@ var common = {
             'bootstrap',
             'toastr',
             'bootstrap-select',
-            'leaflet-omnivore'
+            'csv2geojson',
+            'tokml'
         ]
     },
     output: {
@@ -51,7 +52,8 @@ var common = {
             'L.esri': 'esri-leaflet',
             'toastr': 'toastr',
             'bootstrap-select': 'bootstrap-select',
-            'omnivore': 'leaflet-omnivore'
+            'csv2geojson': 'csv2geojson',
+            'tokml': 'tokml'
         }),
         
         new webpack.DefinePlugin( {'VERSION': JSON.stringify(pkg.version) }),

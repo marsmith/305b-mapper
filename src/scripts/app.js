@@ -15,16 +15,39 @@
 var MapX = '-76.2';
 var MapY = '42.7';
 var map;
-var sitesGeoJSON;  //master geoJSON object of universe of sitesGeoJSON
+var masterGeoJSON,curGeoJSONlayer;
 var sitesLayer;  //leaflet feature group representing current filtered set of sites
 var baseMapLayer, basemapLayerLabels;
+var visibleLayers = [];
+var identifiedFeature;
 var GeoFilterGroupList = [
-	{layerID: "1", layerName: "County", dropDownID: "CNTYC"},
-	{layerID: "2", layerName: "Major River Basin", dropDownID: "MAJRIVBAS"},
-	{layerID: "3", layerName: "Hydrologic Unit", dropDownID: "HUNIT"},
-	{layerID: "4", layerName: "Well Use", dropDownID: "WELLUSE"},
-	{layerID: "5", layerName: "Well Type", dropDownID: "WELLCOMPIN"}	
+	{layerName: "County", dropDownID: "CNTY"},
+	{layerName: "Major River Basin", dropDownID: "MAJRIVBAS"},
+	{layerName: "Hydrologic Unit", dropDownID: "HUC8"},
+	{layerName: "Well Use", dropDownID: "WELLUSE"},
+	{layerName: "Well Type", dropDownID: "WELLCOMPIN"},
+	{layerName: "Congressional District", dropDownID: "CONGDIST"},
+	{layerName: "Senate District", dropDownID: "SENDIST"},
+	{layerName: "Assembly District", dropDownID: "ASSEMDIST"},
+	{layerName: "NY WSC Sub-district", dropDownID: "NYWSCDIST"}
 ];
+
+var layerList = [
+	{layerID: "1", layerName: "NY WSC Sub-district", outFields: ["subdist","FID"],dropDownID: "WSCsubDist"},
+	{layerID: "2", layerName: "Senate District", outFields: ["NAMELSAD","FID","Rep_Name"],dropDownID: "SenateDist"},
+	{layerID: "3", layerName: "Assembly District", outFields: ["NAMELSAD","FID","AD_Name"], dropDownID: "AssemDist"},
+	{layerID: "4", layerName: "Congressional District",	outFields: ["NAMELSAD","FID","CD_Name"], dropDownID: "CongDist"},
+	{layerID: "5", layerName: "County",	outFields: ["County_Nam","FID"],dropDownID: "County"},
+	{layerID: "6",layerName: "Hydrologic Unit",	outFields: ["HUC_8","FID","HU_8_Name"],	dropDownID: "HUC8"}	
+];
+
+var mapServerDetails =  {
+	"url": "https://www.sciencebase.gov/arcgis/rest/services/Catalog/56ba63bae4b08d617f6490d2/MapServer",
+	"layers": [1,2,3,4,5,6], 
+	"visible": false, 
+	"opacity": 0.8,
+}
+
 var geojsonMarkerOptions = {
 	radius: 4,
 	fillColor: '#ff7800',
@@ -37,15 +60,6 @@ var geoFilterFlag;
 var parentArray = [];
 var CSVurl = './data.csv';
 var CSVdata;
-
-var layerList = [
-	{layerID: "1", layerName: "NY WSC Sub-district", outFields: ["subdist","FID"],dropDownID: "WSCsubDist"},
-	{layerID: "2", layerName: "Senate District", outFields: ["NAMELSAD","FID","Rep_Name"],dropDownID: "SenateDist"},
-	{layerID: "3", layerName: "Assembly District", outFields: ["NAMELSAD","FID","AD_Name"], dropDownID: "AssemDist"},
-	{layerID: "4", layerName: "Congressional District",	outFields: ["NAMELSAD","FID","CD_Name"], dropDownID: "CongDist"},
-	{layerID: "5", layerName: "County",	outFields: ["County_Nam","FID"],dropDownID: "County"},
-	{layerID: "6", layerName: "Hydrologic Unit",	outFields: ["HUC_8","FID","HU_8_Name"],	dropDownID: "HUC8"}	
-];
 
 toastr.options = {
   'positionClass': 'toast-bottom-right',
@@ -88,6 +102,9 @@ $( document ).ready(function() {
 
 	//create constituent dropdowns
 	populateConstituentGroupFilters();
+
+	//add map layers
+	parseBaseLayers();
 	
 	/*  START EVENT HANDLERS */
 	$('#mobile-main-menu').click(function() {
@@ -129,7 +146,7 @@ $( document ).ready(function() {
 		downloadKML();
 	});	
 
-	$('#geoFilterSelect').on('changed.bs.select', function (event, clickedIndex, newValue, oldValue) {
+	$('.filterSelect').on('changed.bs.select', function (event, clickedIndex, newValue, oldValue) {
 
 		var parentSelectID = $(event.target).attr('id');
 		var selectArray = $(event.target).find('option:selected');
@@ -146,23 +163,21 @@ $( document ).ready(function() {
 			}
 		}
 
-		var layerID,value,name;
+		var value,name;
 
 		//if operation is a deselect, get remaining selected options
 		if (newValue === false) {
-			layerID = $(event.target).find('option:selected').attr('layerID');
 			value = $(event.target).find('option:selected').attr('value');
 			name = $(event.target).find('option:selected').text();
 		}
 
 		//otherwise make a new selection
 		else {
-			layerID = $(currentSelected).attr('layerID');
 			value = $(currentSelected).attr('value');
 			name = $(currentSelected).text();
 		}
 
-		//console.log('GeoFilter selected: ',name,value,layerID,parentSelectID,singleSelectCount);
+		console.log('GeoFilter selected: ',name,value,parentSelectID,singleSelectCount);
 
 		//find how many different selects have options selected
 		$.each($('#geoFilterSelect').find('option:selected'), function (index,value) {
@@ -183,12 +198,103 @@ $( document ).ready(function() {
 
 		//otherwise do query
 		else {
-			loadSites({selectName:parentSelectID, optionValue:value, optionName:name})
+			toastr.info('Querying sites...', {timeOut: 0});
+			loadSites(curGeoJSONlayer.toGeoJSON(), {selectName:parentSelectID, optionValue:value, optionName:name});
+		}
+	});
+
+	//set up click listener for map querying
+	map.on('click', function (e) {
+		if (visibleLayers.length > 0) {
+			mapServer.identify().on(map).at(e.latlng).layers("visible:" + visibleLayers[0]).run(function(error, featureCollection){
+			  if (featureCollection.features.length > 0) {
+				$.each(featureCollection.features, function (index,value) {
+	
+					if (map.hasLayer(identifiedFeature)) map.removeLayer(identifiedFeature);
+					identifiedFeature = L.geoJson(value).addTo(map)
+					
+					$.each(layerList, function (index, layerInfo) {
+						var popupContent = '<h5>' + layerInfo.layerName + '</h5>';
+						
+						if (visibleLayers[0] == layerInfo.layerID) {
+							$.each(value.properties, function (key, field) {
+								if (layerInfo.outFields.indexOf(key) != -1) {								
+									if (key != "FID") popupContent += '<strong>' + field + '</strong></br>';
+								}
+							});
+							
+							popup = L.popup()
+							.setLatLng(e.latlng)
+							.setContent(popupContent)
+							.openOn(map);
+						}
+					});
+				});
+			  }
+			  else {
+				//pane.innerHTML = 'No features identified.';
+			  }
+			});
+		}
+	});	
+
+	//click listener for regular button
+	$('#baseLayerToggles').on("click", '.layerToggle', function(e) {
+		
+		var layerID = $(this).attr('value');
+		var divID = $(this).attr('id');
+		
+		//clear all check marks
+		$('.mapLayerBtn').removeClass('slick-btn-selection');
+						
+		//remove any selection
+		if (map.hasLayer(identifiedFeature)) map.removeLayer(identifiedFeature);						
+		
+		//layer toggle
+		console.log('current visible layers: ', visibleLayers);
+		
+		//if layer is already on the map
+		if (visibleLayers == layerID) {
+			console.log('map already has this layer: ',divID, layerID);
+			visibleLayers = [];
+			map.removeLayer(mapServer);
+			console.log('current visible layers: ', visibleLayers);
+			
+		} else {
+			console.log('map DOES NOT have this layer: ',divID, layerID);
+			$(this).addClass('slick-btn-selection');
+			visibleLayers = [layerID]
+			mapServer.setLayers(visibleLayers);
+			map.addLayer(mapServer);
+			console.log('current visible layers: ', visibleLayers);
 		}
 	});
 
 	/*  END EVENT HANDLERS */
 });
+
+function parseBaseLayers() {
+
+	mapServer = L.esri.dynamicMapLayer(mapServerDetails);
+	addMapLayer(mapServer, mapServerDetails);
+	
+}
+
+function addMapLayer(mapServer, mapServerDetails) {
+	
+	$.getJSON(mapServerDetails.url + '/legend?f=json', function (legendResponse) {
+			$.each(legendResponse.layers, function (index,legendValue) {
+					
+				$.each(layerList, function (index,layerValue) {
+					
+				if (legendValue.layerId == layerValue.layerID) {
+
+					$('#baseLayerToggles').append('<button id="' + camelize(layerValue.layerName) + '" class="btn btn-default slick-btn mapLayerBtn equalize layerToggle" value="' + layerValue.layerID + '"><img alt="Legend Swatch" src="data:image/png;base64,' + legendValue.legend[0].imageData + '" />' + layerValue.layerName + '</button>')
+				}
+			})
+		});
+	});
+}
 
 function populateConstituentGroupFilters() {
 	$.each(data.constituentGroupList , function( index, item ) {
@@ -196,10 +302,13 @@ function populateConstituentGroupFilters() {
 		var dropDownName = camelize(item.constituentGroup) + "-select"
 		$("#constituentFilterSelect").append("<select id='" + dropDownName  + "' class='selectpicker geoFilterSelect' multiple data-selected-text-format='count' data-dropup-auto='false' title='" + item.constituentGroup + "'></select>");
 
+		//console.log(item.constituentGroup)
+
 		$.each(item.pCodes, function( index, pcode ) {
 			var val = Object.keys(pcode)[0];
 			var text = pcode[Object.keys(pcode)[0]];
 			//console.log(item.constituentGroup ,val,text)
+
 			addFilterOption(val, val + ' | ' + text, '#' + dropDownName);
 		});
 	});
@@ -208,21 +317,37 @@ function populateConstituentGroupFilters() {
 	$('.selectpicker').selectpicker('refresh');
 }
 
-function loadSites(filterInfo) {
+function setFilter(filterInfo,feature) {
+	
+	//constituent group filters, regex search for Pxxxxx
+	var regex = /^(p|P)([0-9]{5})$/;
+	if (regex.test(filterInfo.optionValue)) { 
+		if (feature.properties[filterInfo.optionValue].length > 0) {
+			console.log('match found');
+			return true;
+		}
+	}
 
-	toastr.info('Drawing GeoJSON...', {timeOut: 0});
+	//geoFilterSelect filters
+	else {
+		return feature.properties[filterInfo.selectName.replace('-select','')] === filterInfo.optionValue;
+	}
+}
+
+function loadSites(geoJSON, filterInfo) {
 
 	//clear current display layer
 	sitesLayer.clearLayers();
 
-	var geoJSONlayer = L.geoJson(null, {
+	curGeoJSONlayer = L.geoJson(geoJSON, {
 		//optional filter input
 		filter: function(feature, layer) {
-			if (filterInfo && filterInfo.selectName === 'CNTYC-select') return feature.properties.CNTYC === filterInfo.optionValue;
-			if (filterInfo && filterInfo.selectName === 'MAJRIVBAS-select') return feature.properties.MAJRIVBAS === filterInfo.optionValue;
-			if (filterInfo && filterInfo.selectName === 'HUNIT-select') return feature.properties.HUNIT.substring(0,8) === filterInfo.optionValue;
-			if (filterInfo && filterInfo.selectName === 'WELLUSE-select') return feature.properties.WELLUSE === filterInfo.optionValue;
-			if (filterInfo && filterInfo.selectName === 'WELLCOMPIN-select') return feature.properties.WELLCOMPIN === filterInfo.optionValue;
+			//only drop into this loop if there is a filter selection
+			if (filterInfo) {
+				return setFilter(filterInfo,feature);
+			}
+
+			//make sure if there is no filter we pass the site thru
 			return true;
 		},
 		pointToLayer: function (feature, latlng) {
@@ -230,27 +355,52 @@ function loadSites(filterInfo) {
 		},
 		onEachFeature: function (feature, layer) {
 			populateGeoFilters(feature);
+			//too costly to create popups for all features here
 		}
-	});
+	})
 
-	var geoJSON = omnivore.csv.parse(CSVdata, null, geoJSONlayer).addTo(map);
-	sitesLayer.addLayer(geoJSON);
+		//set up popup here, so only instantiated on click
+		.on('click', function(e) { 
 
-	//needs a setTimeout for geoJSON to finish loading
-	setTimeout(function(){ map.fitBounds(sitesLayer.getBounds()); }, 100);
+			//create popup content
+			var $popupContent = $('<div>', { id: 'popup' });
+			$.each(e.layer.feature.properties, function( index, property ) {
+				if (index.length > 0 && property.length > 0) {
+					$popupContent.append('<b>' + index + ':</b>  ' + property + '</br>')
+				}
+			});
+
+			//open popup at clicked point
+			var popup = L.popup({autoPan: false})
+				.setLatLng(e.latlng)
+				.setContent($popupContent.html())
+				.openOn(map);
+		});
+	
+	$('#siteCount').text(curGeoJSONlayer.getLayers().length + ' sites')
+
+	//add to map
+	sitesLayer.addLayer(curGeoJSONlayer);
+
+	//zoom to select
+	map.fitBounds(sitesLayer.getBounds());
+
+	//clear loading toast
 	toastr.clear();
 }
 
 function loadCSV(url) {
+	toastr.info('Drawing GeoJSON...', {timeOut: 0});
 	$.ajax({
 		type : "GET",
 		url : url,
 		dataType : "text",
 		async : false,
 		success : function(data){
-			//console.log('csv',data)
-			CSVdata = data;
-			loadSites();
+			csv2geojson.csv2geojson(data, function(err, data) {
+				masterGeoJSON = data
+				loadSites(masterGeoJSON, null);
+			});
 		}
 	});
 }
@@ -263,14 +413,9 @@ function populateGeoFilters(feature) {
 		//populate the dropdowns
 		var elementName = '#' + filter.dropDownID + '-select';
 
-		//have to use callback function for county because a lookup is needed
-		if (filter.layerName === 'County') { getCountyNameFromFIPS(feature.properties.CNTYC, elementName, addFilterOption)};
+		//add filterOption
+		addFilterOption(feature.properties[filter.dropDownID], feature.properties[filter.dropDownID], elementName);
 
-		//for others just add the filter option
-		if (filter.layerName === 'Major River Basin') {addFilterOption(feature.properties.MAJRIVBAS, feature.properties.MAJRIVBAS, elementName)};
-		if (filter.layerName === 'Hydrologic Unit') {addFilterOption(feature.properties.HUNIT.substring(0,8), feature.properties.HUNIT.substring(0,8), elementName)};
-		if (filter.layerName === 'Well Use') {addFilterOption(feature.properties.WELLUSE, feature.properties.WELLUSE, elementName)};
-		if (filter.layerName === 'Well Type') {addFilterOption(feature.properties.WELLCOMPIN, feature.properties.WELLCOMPIN, elementName)};
 	});
 }
 
@@ -280,19 +425,6 @@ function addFilterOption(code, text, elementName) {
 		//console.log('adding an option for:',elementName,code)
 		$(elementName).append($('<option></option>').attr('value',code).text(text));
 	}
-}
-
-function getCountyNameFromFIPS(FIPScode, elementName, callback) {
-
-	//from here: https://www.census.gov/geo/reference/codes/cou.html
-	//then converted to json: https://www.csvjson.com/csv2json
-	$.each(data.countyLookup, function( index, county ) {
-		if (county.CountyCd === FIPScode) {
-			//console.log('in county lookup:',FIPScode,county.CountyCd);
-			callback(FIPScode, county.CountyName, elementName);
-		}
-	});
-		
 }
 
 function createGeoFilterGroups(list) {
@@ -414,7 +546,7 @@ function resetFilters() {
 function resetView() {
 
 	//clear any selection graphics
-	loadSites();
+	loadSites(masterGeoJSON,null);
 
 	//reset filters
 	resetFilters();

@@ -41,15 +41,17 @@
                             <div id="filtersPanel" class="panel-collapse collapse in">
                                 <div class="panel-body collapse in">     
                                     <button type="button" class="btn btn-success btn-block" id="resetFilters" >Reset Filters</button>
+
+                                    <h5 id="siteCount"></h5>
        
-                                    <div id="geoFilterSelect">
+                                    <div id="geoFilterSelect" class="filterSelect">
                                         </br><label>Site / Location Filters</label>
                                     </div>
 
-                                    <div id="constituentFilterSelect">
+                                    <div id="constituentFilterSelect" class="filterSelect">
                                         </br><label>Constituent Group Filters</label>
                                     </div>
-				
+                                    
 									
                                 </div>
                             </div>
@@ -75,6 +77,21 @@
                                             <button type="button" class="btn btn-success btn-block" id="exportKML" >Export KML&nbsp;&nbsp;<i class="glyphicon glyphicon-download-alt"></i></button>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel panel-default sidebar-panel">
+                            <div class="panel-heading">
+                                <h4 class="panel-title">
+                                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#mapLayersPanel">
+                                        Map Layers
+                                    </a>
+                                </h4>
+                            </div>
+                            <div id="mapLayersPanel" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <div id="baseLayerToggles" style="padding: 2px 2px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -117,7 +134,7 @@
                 <div id="aboutModalBody" class="modal-body">
                     <ul class="nav nav-tabs" id="aboutModalTabs">
                         <li role="presentation" class="active"><a id="aboutTab" href="#aboutTabPane" data-toggle="tab"><i class="fa fa-question-circle"></i>&nbsp;About the application</a></li>
-                        <li role="presentation"><a id="disclaimerTab" href="#disclaimerTabPane" data-toggle="tab"><i class="fa fa-exclamation-circle"></i>&nbsp;Site Information</a></li>
+                        <li role="presentation"><a id="disclaimerTab" href="#disclaimerTabPane" data-toggle="tab"><i class="fa fa-exclamation-circle"></i>&nbsp;Disclaimer</a></li>
                     </ul>
                     <div class="tab-content">
                         <div role="tabpanel" class="tab-pane active" id="aboutTabPane"></br>
