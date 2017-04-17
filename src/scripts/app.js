@@ -20,6 +20,8 @@ var sitesLayer;  //leaflet feature group representing current filtered set of si
 var baseMapLayer, basemapLayerLabels;
 var visibleLayers = [];
 var identifiedFeature;
+var filterSelections = [];
+var popupItems = ['SNAME','STAID','MAJRIVBAS','WELLUSE','WELLCOMPIN','CNTY','GUNIT','HUNIT'];
 var GeoFilterGroupList = [
 	{layerName: "County", dropDownID: "CNTY"},
 	{layerName: "Major River Basin", dropDownID: "MAJRIVBAS"},
@@ -134,8 +136,10 @@ $( document ).ready(function() {
 		$('#aboutModal').modal('show');
 	});	
 
-	$('#getQWdata').click(function() {
-		getQWdata();
+	$('#showConstituentFilterSelect').click(function() {
+		$('#showConstituentFilterSelect').hide();
+		$('#geoFilterSelect').hide();
+		$('#constituentFilterSelect').show();
 	});	
 
 	$('#exportGeoJSON').click(function() {
@@ -146,38 +150,26 @@ $( document ).ready(function() {
 		downloadKML();
 	});	
 
-	$('.filterSelect').on('changed.bs.select', function (event, clickedIndex, newValue, oldValue) {
+	$('#exportCSV').click(function() {
+		downloadCSV();
+	});	
+
+	$('#geoFilterSelect').on('changed.bs.select', function (event, clickedIndex, newValue, oldValue) {
 
 		var parentSelectID = $(event.target).attr('id');
+		var parentSelect = parentSelectID.replace('-select','')
 		var selectArray = $(event.target).find('option:selected');
 		var singleSelectCount = selectArray.length;
 		var currentSelected = $(event.target).find('option')[clickedIndex];
-
-		//console.log('current selected: ', currentSelected, parentSelectID )
+		var	value = $(currentSelected).attr('value');
+		var	name = $(currentSelected).text();
 
 		if (singleSelectCount === 0) {
-			//console.log('here',parentSelectID,parentArray);
 			var index = parentArray.indexOf(parentSelectID);
 			if (index > -1) {
 				parentArray.splice(index, 1);
 			}
 		}
-
-		var value,name;
-
-		//if operation is a deselect, get remaining selected options
-		if (newValue === false) {
-			value = $(event.target).find('option:selected').attr('value');
-			name = $(event.target).find('option:selected').text();
-		}
-
-		//otherwise make a new selection
-		else {
-			value = $(currentSelected).attr('value');
-			name = $(currentSelected).text();
-		}
-
-		console.log('GeoFilter selected: ',name,value,parentSelectID,singleSelectCount);
 
 		//find how many different selects have options selected
 		$.each($('#geoFilterSelect').find('option:selected'), function (index,value) {
@@ -187,8 +179,26 @@ $( document ).ready(function() {
 			}
 		});
 
-		//console.log('geoselect with selections in:',parentArray);
-		
+		console.log('here1',selectArray.length,parentArray.length)
+
+		//if operation is a deselect, get remaining selected options
+		if (newValue === false) {
+			
+			console.log('should be removing the filter:',parentSelect,value)
+			for (i = 0; i < filterSelections.length; i++) { 
+				if (filterSelections[i].selectName == parentSelect && filterSelections[i].optionValue == value) {
+					console.log('found something to remove')
+					filterSelections.splice(i, 1);
+				}
+			}
+		}
+
+		//assume new selection
+		else {
+			var filterSelect = {selectName:parentSelect, optionValue:value};
+			filterSelections.push(filterSelect);
+		}
+
 		//if all in a single select are unselected, reset filters
 		if (singleSelectCount === 0 && parentArray.length === 0) {
 			toastr.info('You just unselected all options, resetting filters', 'Info');
@@ -199,8 +209,34 @@ $( document ).ready(function() {
 		//otherwise do query
 		else {
 			toastr.info('Querying sites...', {timeOut: 0});
-			loadSites(curGeoJSONlayer.toGeoJSON(), {selectName:parentSelectID, optionValue:value, optionName:name});
+			console.log('doing query',filterSelections)
+
+			//if multiple parent dropdowns in use, assume subtraction
+			if (parentArray.length > 1) {
+				console.log('here2')
+				console.log('should be removing the filter:',parentSelect,value)
+
+
+				console.log('check',filterSelect)
+				loadSites(curGeoJSONlayer.toGeoJSON(),[filterSelect]);
+			}
+
+			//otherwise add
+			else {
+				loadSites(masterGeoJSON,filterSelections);
+
+			}			
 		}
+	});
+
+	$('#constituentFilterSelect').on('changed.bs.select', function (event, clickedIndex, newValue, oldValue) {
+		console.log('here5')
+		var parentSelectID = $(event.target).attr('id');
+		var parentSelect = parentSelectID.replace('-select','')
+		var value = $(event.target).find('option:selected').attr('value');
+		var	name = $(event.target).find('option:selected').text();
+
+		 loadSites(curGeoJSONlayer.toGeoJSON(), filterSelect);
 	});
 
 	//set up click listener for map querying
@@ -314,10 +350,36 @@ function populateConstituentGroupFilters() {
 	});
 
 	//REFRESH	
+	refreshAndSortFilters();
+	
+}
+
+function refreshAndSortFilters() {
+
+	//loop over each select dropdown
+	$('.selectpicker').each(function( index ) {
+		var id = $(this).attr('id');
+
+		var items = $('#' + id + ' option').get();
+		items.sort(function(a,b){
+			var keyA = $(a).text();
+			var keyB = $(b).text();
+
+			if (keyA < keyB) return -1;
+			if (keyA > keyB) return 1;
+			return 0;
+		});
+		var select = $('#' + id);
+		$.each(items, function(i, option){
+			select.append(option);
+		});
+	});
+
+	//refresh them all
 	$('.selectpicker').selectpicker('refresh');
 }
 
-function setFilter(filterInfo,feature) {
+function setFilter(filterInfo, feature, method) {
 	
 	//constituent group filters, regex search for Pxxxxx
 	var regex = /^(p|P)([0-9]{5})$/;
@@ -330,16 +392,22 @@ function setFilter(filterInfo,feature) {
 
 	//geoFilterSelect filters
 	else {
-		return feature.properties[filterInfo.selectName.replace('-select','')] === filterInfo.optionValue;
+
+		//loop over multiple filters if we have them
+		for (i = 0; i < filterInfo.length; i++) { 
+			if (feature.properties[filterInfo[i].selectName] === filterInfo[i].optionValue) {
+				console.log('match found',feature.properties);
+				return true;
+			}
+		}
 	}
 }
 
-function loadSites(geoJSON, filterInfo) {
+function loadSites(inputGeoJSON,filterInfo) {
 
-	//clear current display layer
 	sitesLayer.clearLayers();
-
-	curGeoJSONlayer = L.geoJson(geoJSON, {
+	
+	curGeoJSONlayer = L.geoJson(inputGeoJSON, {
 		//optional filter input
 		filter: function(feature, layer) {
 			//only drop into this loop if there is a filter selection
@@ -361,12 +429,23 @@ function loadSites(geoJSON, filterInfo) {
 
 		//set up popup here, so only instantiated on click
 		.on('click', function(e) { 
+			
 
 			//create popup content
 			var $popupContent = $('<div>', { id: 'popup' });
+			
 			$.each(e.layer.feature.properties, function( index, property ) {
+				
 				if (index.length > 0 && property.length > 0) {
-					$popupContent.append('<b>' + index + ':</b>  ' + property + '</br>')
+					//limit the popup items
+					if (popupItems.indexOf(index) != -1) {
+						//use lookup to get long name for attribute
+						$.each(data.attributeLookup[0], function( longName, shortName ) {
+							if (shortName == index) {
+								$popupContent.append('<b>' + longName + ':</b>  ' + property + '</br>')
+							}	
+						});
+					}
 				}
 			});
 
@@ -377,16 +456,25 @@ function loadSites(geoJSON, filterInfo) {
 				.openOn(map);
 		});
 	
-	$('#siteCount').text(curGeoJSONlayer.getLayers().length + ' sites')
+	var siteCount = curGeoJSONlayer.getLayers().length;
+	$('#siteCount').text(siteCount + ' sites')
 
-	//add to map
-	sitesLayer.addLayer(curGeoJSONlayer);
+	
 
-	//zoom to select
-	map.fitBounds(sitesLayer.getBounds());
+	if (siteCount > 0) {
 
-	//clear loading toast
-	toastr.clear();
+		//add to map
+		sitesLayer.addLayer(curGeoJSONlayer);
+
+		//zoom to select
+		map.fitBounds(sitesLayer.getBounds());
+	}
+	else {
+		toastr.error('Error', 'No sites found, please check your filter selections', {timeOut: 0})
+
+		//resetView();
+	}
+
 }
 
 function loadCSV(url) {
@@ -446,22 +534,55 @@ function downloadGeoJSON() {
 		downloadFile(GeoJSON,filename)
 	}
 	else {
-		toastr.error('Error', 'No sites to export')
+		toastr.error('Error', 'No sites to export', {timeOut: 0})
 	}
 }
 
 function downloadKML() {
 	//https://github.com/mapbox/tokml
 	//https://gis.stackexchange.com/questions/159344/export-to-kml-option-using-leaflet
-	if (sitesLayer.toGeoJSON().features[0]) {
-		var GeoJSON = sitesLayer.toGeoJSON().features[0];
+	var geojson = sitesLayer.toGeoJSON();
+
+	if (geojson.features[0]) {
+		var GeoJSON = geojson.features[0];
 		var kml = tokml(GeoJSON);
 		var filename = 'data.kml';
 		downloadFile(kml,filename);
 	}
 	else {
-		toastr.error('Error', 'No sites to export')
+		toastr.error('Error', 'No sites to export', {timeOut: 0})
 	}
+}
+
+function downloadCSV() {
+	var geojson = sitesLayer.toGeoJSON().features[0];
+
+    if (geojson) {
+		//get headers
+        var attributeNames = Object.keys(geojson.features[0].properties);
+
+        // write csv file
+        var csvData = [];
+        csvData.push(attributeNames.join(','));
+
+        geojson.features.forEach(function(feature) {
+            var attributes = [];
+            attributeNames.forEach(function(name) {
+                attributes.push((feature.properties[name].toString()));
+            });
+            csvData.push(attributes);
+        });
+
+        csvData = csvData.join('\n');
+
+        var filename = 'data.csv';
+		downloadFile(csvData,filename);
+	}
+
+	else {
+		toastr.error('Error', 'No sites to export', {timeOut: 0})
+	}
+
 }
 
 function downloadFile(data,filename) {
@@ -484,36 +605,6 @@ function downloadFile(data,filename) {
 			window.open(url);
 		}
 	}
-}
-
-function USGSrdb2JSON(tsv){
-
-	var lines=tsv.split(/\r?\n/);
-	var result = [];
-	var headers;
-
-	$.each(lines, function( index, line ) {
-		var obj = {};
-		if(line[0] != '#') {		
-			var currentline=line.split('\t');
-
-			if (currentline[0] === 'agency_cd') {
-				headers=currentline;
-			}
-			if (currentline[0] !== '5s' && currentline[0] !== 'agency_cd') {
-				//console.log(currentline)
-
-				for(var j=0;j<headers.length;j++){
-					obj[headers[j]] = currentline[j];
-				}
-
-				result.push(obj) 
-			}
-		}
-	});
-  
-	//return result; //JavaScript object
-	return result; //JSON
 }
 
 function setBasemap(baseMap) {
@@ -541,9 +632,14 @@ function resetFilters() {
 	$('.selectpicker').selectpicker('deselectAll');
 
 	parentArray = [];
+	filterSelections = [];
 }
 
 function resetView() {
+
+	$('#showConstituentFilterSelect').show();
+	$('#geoFilterSelect').show();
+	$('#constituentFilterSelect').hide();
 
 	//clear any selection graphics
 	loadSites(masterGeoJSON,null);

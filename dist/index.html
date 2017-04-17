@@ -42,13 +42,17 @@
                                 <div class="panel-body collapse in">     
                                     <button type="button" class="btn btn-success btn-block" id="resetFilters" >Reset Filters</button>
 
-                                    <h5 id="siteCount"></h5>
+                                    <h4 id="siteCount" class="text-right"></h4>
        
                                     <div id="geoFilterSelect" class="filterSelect">
                                         </br><label>Site / Location Filters</label>
                                     </div>
 
-                                    <div id="constituentFilterSelect" class="filterSelect">
+                                    <div id="showConstituentFilterSelect" class="btn-toolbar" style="padding-top: 20px;">
+                                        <button type="button" class="btn btn-success btn-block"  >Continue to Constituent Filters</button>
+                                    </div>
+
+                                    <div id="constituentFilterSelect" class="filterSelect" style="display:none;">
                                         </br><label>Constituent Group Filters</label>
                                     </div>
                                     
@@ -75,6 +79,9 @@
                                         </div>
                                        <div class="form-group">
                                             <button type="button" class="btn btn-success btn-block" id="exportKML" >Export KML&nbsp;&nbsp;<i class="glyphicon glyphicon-download-alt"></i></button>
+                                        </div>
+                                        <div class="form-group">
+                                            <button type="button" class="btn btn-success btn-block" id="exportCSV" >Export CSV&nbsp;&nbsp;<i class="glyphicon glyphicon-download-alt"></i></button>
                                         </div>
                                     </div>
                                 </div>
