@@ -179,15 +179,15 @@ $( document ).ready(function() {
 			}
 		});
 
-		console.log('here1',selectArray.length,parentArray.length)
+		//console.log('here1',selectArray.length,parentArray.length)
 
 		//if operation is a deselect, get remaining selected options
 		if (newValue === false) {
 			
-			console.log('should be removing the filter:',parentSelect,value)
+			console.log('Removing the filter:',parentSelect,value)
 			for (i = 0; i < filterSelections.length; i++) { 
 				if (filterSelections[i].selectName == parentSelect && filterSelections[i].optionValue == value) {
-					console.log('found something to remove')
+					//console.log('found something to remove')
 					filterSelections.splice(i, 1);
 				}
 			}
@@ -209,22 +209,16 @@ $( document ).ready(function() {
 		//otherwise do query
 		else {
 			toastr.info('Querying sites...', {timeOut: 0});
-			console.log('doing query',filterSelections)
+			//console.log('doing query',filterSelections)
 
-			//if multiple parent dropdowns in use, assume subtraction
+			//if multiple parent dropdowns in use, assume conditional 'AND' (remove sites from subset)
 			if (parentArray.length > 1) {
-				console.log('here2')
-				console.log('should be removing the filter:',parentSelect,value)
-
-
-				console.log('check',filterSelect)
 				loadSites(curGeoJSONlayer.toGeoJSON(),[filterSelect]);
 			}
 
-			//otherwise add
+			//otherwise add sites from master, simulating conditional 'OR'
 			else {
 				loadSites(masterGeoJSON,filterSelections);
-
 			}			
 		}
 	});
@@ -235,8 +229,9 @@ $( document ).ready(function() {
 		var parentSelect = parentSelectID.replace('-select','')
 		var value = $(event.target).find('option:selected').attr('value');
 		var	name = $(event.target).find('option:selected').text();
+		var filterSelect = {selectName:parentSelect, optionValue:value};
 
-		 loadSites(curGeoJSONlayer.toGeoJSON(), filterSelect);
+		 loadSites(curGeoJSONlayer.toGeoJSON(), [filterSelect]);
 	});
 
 	//set up click listener for map querying
@@ -379,25 +374,27 @@ function refreshAndSortFilters() {
 	$('.selectpicker').selectpicker('refresh');
 }
 
-function setFilter(filterInfo, feature, method) {
+function setFilter(filterInfo, feature) {
 	
 	//constituent group filters, regex search for Pxxxxx
-	var regex = /^(p|P)([0-9]{5})$/;
-	if (regex.test(filterInfo.optionValue)) { 
-		if (feature.properties[filterInfo.optionValue].length > 0) {
-			console.log('match found');
-			return true;
-		}
-	}
-
-	//geoFilterSelect filters
-	else {
-
-		//loop over multiple filters if we have them
-		for (i = 0; i < filterInfo.length; i++) { 
-			if (feature.properties[filterInfo[i].selectName] === filterInfo[i].optionValue) {
-				console.log('match found',feature.properties);
+	for (i = 0; i < filterInfo.length; i++) { 
+		var regex = /^(p|P)([0-9]{5})$/;
+		if (regex.test(filterInfo[i].optionValue)) { 
+			if (feature.properties[filterInfo[i].optionValue].length > 0) {
+				console.log('match found');
 				return true;
+			}
+		}
+
+		//geoFilterSelect filters
+		else {
+
+			//loop over multiple filters if we have them
+			for (i = 0; i < filterInfo.length; i++) { 
+				if (feature.properties[filterInfo[i].selectName] === filterInfo[i].optionValue) {
+					//console.log('match found',feature.properties);
+					return true;
+				}
 			}
 		}
 	}
@@ -430,7 +427,6 @@ function loadSites(inputGeoJSON,filterInfo) {
 		//set up popup here, so only instantiated on click
 		.on('click', function(e) { 
 			
-
 			//create popup content
 			var $popupContent = $('<div>', { id: 'popup' });
 			
@@ -470,7 +466,7 @@ function loadSites(inputGeoJSON,filterInfo) {
 		map.fitBounds(sitesLayer.getBounds());
 	}
 	else {
-		toastr.error('Error', 'No sites found, please check your filter selections', {timeOut: 0})
+		toastr.error('Error', 'No sites found, please check your filter selections', {timeOut: 20000})
 
 		//resetView();
 	}
