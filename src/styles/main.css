@@ -208,13 +208,11 @@ body {
   left: 0;
   z-index: 999;
   transition: left .5s ease;
-  overflow:visible !important;
-  z-index:1000;
 }
 
 #main-menu .main-menu-container {
-  overflow-y: auto;
   height: 100%;
+  z-index: 99999;
 }
 
 /************* END MAIN MENU **************/

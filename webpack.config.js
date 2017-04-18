@@ -73,7 +73,7 @@ switch(process.env.npm_lifecycle_event) {
         plugins: [
             new webpack.optimize.UglifyJsPlugin({compress: { warnings: false }}),
             new webpack.DefinePlugin({ 'process.env.NODE_ENV': JSON.stringify('production') }),
-            new CopyWebpackPlugin([{ from: PATHS.src, to: PATHS.dist, ignore: ['app.js', 'fonts/**/*', 'styles/**/*']} ]),
+            new CopyWebpackPlugin([{ from: PATHS.src, to: PATHS.dist, ignore: ['app.js', 'data.js', 'data/**/*', 'fonts/**/*', 'styles/**/*']} ]),
             new webpack.optimize.CommonsChunkPlugin({name:'vendor', filename:'vendor.bundle.min.js'}),
         ]
       }

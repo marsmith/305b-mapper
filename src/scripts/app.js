@@ -35,17 +35,20 @@ var GeoFilterGroupList = [
 ];
 
 var layerList = [
-	{layerID: "1", layerName: "NY WSC Sub-district", outFields: ["subdist","FID"],dropDownID: "WSCsubDist"},
-	{layerID: "2", layerName: "Senate District", outFields: ["NAMELSAD","FID","Rep_Name"],dropDownID: "SenateDist"},
-	{layerID: "3", layerName: "Assembly District", outFields: ["NAMELSAD","FID","AD_Name"], dropDownID: "AssemDist"},
-	{layerID: "4", layerName: "Congressional District",	outFields: ["NAMELSAD","FID","CD_Name"], dropDownID: "CongDist"},
-	{layerID: "5", layerName: "County",	outFields: ["County_Nam","FID"],dropDownID: "County"},
-	{layerID: "6",layerName: "Hydrologic Unit",	outFields: ["HUC_8","FID","HU_8_Name"],	dropDownID: "HUC8"}	
+	{layerID: "0", layerName: "NY WSC Sub-district", outFields: ["subdist","FID"],dropDownID: "WSCsubDist"},
+	{layerID: "1", layerName: "Senate District", outFields: ["NAMELSAD","FID","Rep_Name"],dropDownID: "SenateDist"},
+	{layerID: "2", layerName: "Assembly District", outFields: ["NAMELSAD","FID","AD_Name"], dropDownID: "AssemDist"},
+	{layerID: "3", layerName: "Congressional District",	outFields: ["NAMELSAD","FID","CD_Name"], dropDownID: "CongDist"},
+	{layerID: "4", layerName: "County",	outFields: ["County_Nam","FID"],dropDownID: "County"},
+	{layerID: "5", layerName: "Hydrologic Unit",	outFields: ["HUC_8","FID","HU_8_Name"],	dropDownID: "HUC8"},
+	{layerID: "6", layerName: "Surficial Geology",	outFields: ["FID","MATERIAL"], dropDownID: "SurfGeol"},
+	{layerID: "7", layerName: "Bedrock Geology",	outFields: ["FID","MATERIAL"],dropDownID: "BedrockGeol"},
+	{layerID: "8", layerName: "NLCD 2011 Land Cover",	outFields: [],	dropDownID: "NLCD11"}	
 ];
 
 var mapServerDetails =  {
-	"url": "https://www.sciencebase.gov/arcgis/rest/services/Catalog/56ba63bae4b08d617f6490d2/MapServer",
-	"layers": [1,2,3,4,5,6], 
+	"url": "https://www.sciencebase.gov/arcgis/rest/services/Catalog/58f63226e4b0f2e20545e5e1/MapServer",
+	"layers": [0,1,2,3,4,5,6,7,8], 
 	"visible": false, 
 	"opacity": 0.8,
 }
@@ -328,19 +331,23 @@ function addMapLayer(mapServer, mapServerDetails) {
 }
 
 function populateConstituentGroupFilters() {
-	$.each(data.constituentGroupList , function( index, item ) {
+	$.each(data.constituentGroupList , function(constituentGroup, pCodeList) {
 
-		var dropDownName = camelize(item.constituentGroup) + "-select"
-		$("#constituentFilterSelect").append("<select id='" + dropDownName  + "' class='selectpicker geoFilterSelect' multiple data-selected-text-format='count' data-dropup-auto='false' title='" + item.constituentGroup + "'></select>");
+		var dropDownName = camelize(constituentGroup.replace(",","")) + "-select"
+		$("#constituentFilterSelect").append("<select id='" + dropDownName  + "' class='selectpicker constituentFilterSelect' multiple data-selected-text-format='count' data-header='" + constituentGroup + "'title='" + constituentGroup + "'></select>");
 
-		//console.log(item.constituentGroup)
+		//loop over pcodeList
+		$.each(pCodeList, function( index, pcode ) {
 
-		$.each(item.pCodes, function( index, pcode ) {
-			var val = Object.keys(pcode)[0];
-			var text = pcode[Object.keys(pcode)[0]];
-			//console.log(item.constituentGroup ,val,text)
+			//look up pcode longName
+			$.each(data.attributeLookup[0], function(longName, shortName) {
 
-			addFilterOption(val, val + ' | ' + text, '#' + dropDownName);
+				if (shortName === pcode) {
+					console.log(dropDownName,constituentGroup,pcode,shortName,longName)
+					addFilterOption(shortName, shortName + ' | ' + longName, '#' + dropDownName);
+				}
+			});
+
 		});
 	});
 
@@ -376,8 +383,9 @@ function refreshAndSortFilters() {
 
 function setFilter(filterInfo, feature) {
 	
-	//constituent group filters, regex search for Pxxxxx
+	//loop over multiple filters if we have them
 	for (i = 0; i < filterInfo.length; i++) { 
+		//constituent group filters, regex search for Pxxxxx
 		var regex = /^(p|P)([0-9]{5})$/;
 		if (regex.test(filterInfo[i].optionValue)) { 
 			if (feature.properties[filterInfo[i].optionValue].length > 0) {
@@ -388,8 +396,6 @@ function setFilter(filterInfo, feature) {
 
 		//geoFilterSelect filters
 		else {
-
-			//loop over multiple filters if we have them
 			for (i = 0; i < filterInfo.length; i++) { 
 				if (feature.properties[filterInfo[i].selectName] === filterInfo[i].optionValue) {
 					//console.log('match found',feature.properties);
@@ -515,7 +521,7 @@ function createGeoFilterGroups(list) {
 	$.each(list, function(index, filter) {
 
 		//create dropdown menus
-		$("#geoFilterSelect").append("<select id='" + filter.dropDownID + "-select' class='selectpicker geoFilterSelect' multiple data-selected-text-format='count' data-dropup-auto='false' title='" + filter.layerName + "'></select>");
+		$("#geoFilterSelect").append("<select id='" + filter.dropDownID + "-select' class='selectpicker geoFilterSelect' multiple data-selected-text-format='count' data-header='" + filter.layerName + "' title='" + filter.layerName + "'></select>");
 	});
 
 	loadCSV(CSVurl);
